@@ -16,22 +16,27 @@ fast-forwarded, and one with uncommitted work is left alone.
 
 ## Windows (ALPHAX / Alienware Area-51)
 
-### Step 1 — install the two tools
+Open **PowerShell** from the Start menu. Two blocks, in order.
 
-Open **PowerShell** from the Start menu and paste this:
+### Step 1 — install the tools, then make this window see them
 
 ```powershell
 winget install --id Git.Git    -e --source winget --accept-package-agreements --accept-source-agreements
 winget install --id GitHub.cli -e --source winget --accept-package-agreements --accept-source-agreements
+$env:Path += ";$env:ProgramFiles\Git\cmd;$env:ProgramFiles\GitHub CLI"
+git --version; gh --version
 ```
 
-### Step 2 — close that window, open a **new** PowerShell window
+That last pair of commands must print two version numbers. If either says
+*"not recognized"*, stop — step 2 cannot work. See
+[Troubleshooting](#troubleshooting) below.
 
-This matters. `winget` adds `git` and `gh` to your PATH, but only new windows
-pick it up. Skipping this is the #1 reason step 3 fails with
-`'gh' is not recognized`.
+The `$env:Path` line matters: `winget` adds tools to the PATH of *future*
+PowerShell windows only, so without it the window you just installed from still
+can't find `git` or `gh`. Adding the install directories by hand fixes that
+without closing anything. (Opening a fresh window works too.)
 
-### Step 3 — sign in and run the setup
+### Step 2 — sign in and run the setup
 
 ```powershell
 gh auth login --hostname github.com --git-protocol https --web
@@ -45,6 +50,28 @@ one-time code it shows you.
 
 That's it. Everything you can see on GitHub ends up in `C:\Users\matth\github\`.
 
+<a name="troubleshooting"></a>
+### Troubleshooting
+
+**`The term 'gh' is not recognized`** — step 1 didn't finish, or this window
+predates the install. Re-run the `$env:Path += ...` line from step 1, then
+`gh --version`. Still failing? Check whether it landed anywhere at all:
+
+```powershell
+Test-Path "$env:ProgramFiles\GitHub CLI\gh.exe"
+```
+
+`True` means it's installed and only the PATH is wrong — call it by full path:
+`& "$env:ProgramFiles\GitHub CLI\gh.exe" --version`. `False` means the winget
+install genuinely failed; re-run it and read its output.
+
+**`winget` is not recognized** — it ships with Windows 11 as *App Installer*.
+Update it from the Microsoft Store, or install git and gh by hand from
+[git-scm.com](https://git-scm.com/downloads) and [cli.github.com](https://cli.github.com).
+
+**`cannot be loaded because running scripts is disabled`** — you left off
+`-ExecutionPolicy Bypass`. Use the full command as written in step 2.
+
 ### A note specific to this machine
 
 Your System Information shows **App Control for Business: Enforced**. Two
@@ -52,13 +79,14 @@ consequences, both already handled:
 
 - PowerShell may run in *Constrained Language Mode*. The script detects this,
   prints a warning, and avoids the .NET calls that mode blocks.
-- Scripts won't run under the default execution policy, which is why step 3
+- Scripts won't run under the default execution policy, which is why step 2
   uses `-ExecutionPolicy Bypass` for that single command. It does not change
   any setting on the machine.
 
 If `winget` itself is blocked by policy, install the two tools by hand from
 [git-scm.com](https://git-scm.com/downloads) and [cli.github.com](https://cli.github.com),
-then pick up at step 2.
+then pick up at step 2 (the `$env:Path` line from step 1 first, if `gh` isn't
+found).
 
 ---
 

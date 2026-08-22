@@ -28,8 +28,31 @@ function Have ($c) { [bool](Get-Command $c -ErrorAction SilentlyContinue) }
 $Constrained = $ExecutionContext.SessionState.LanguageMode -ne 'FullLanguage'
 if ($Constrained) {
     Warn "PowerShell is in $($ExecutionContext.SessionState.LanguageMode) (App Control is enforced)."
-    Warn 'Everything still works, but after installing tools you must open a NEW window.'
+    Warn 'Handled - the script stays off the calls that mode blocks.'
 }
+
+# winget puts new tools on the PATH of *future* shells only, so a fresh install is
+# invisible to the window that installed it. Rather than making the user close and
+# reopen, add the standard install locations to this session's PATH directly.
+# Plain string work, so it survives Constrained Language Mode too.
+function Add-KnownToolPaths {
+    $candidates = @(
+        "$env:ProgramFiles\Git\cmd"
+        "$env:ProgramFiles\GitHub CLI"
+        "${env:ProgramFiles(x86)}\Git\cmd"
+        "$env:LOCALAPPDATA\Programs\Git\cmd"
+        "$env:LOCALAPPDATA\Microsoft\WinGet\Links"
+    )
+    foreach ($dir in $candidates) {
+        # Skip entries whose environment variable was empty (e.g. no x86 dir on
+        # a 64-bit-only install) - they collapse to a bare relative path.
+        if ($dir -notmatch '^[A-Za-z]:\\') { continue }
+        if ((Test-Path $dir) -and ($env:Path -notlike "*$dir*")) {
+            $env:Path = "$env:Path;$dir"
+        }
+    }
+}
+Add-KnownToolPaths
 
 # ---------------------------------------------------------------- install deps
 
@@ -40,13 +63,16 @@ function Install-Tool($command, $wingetId, $displayName) {
         throw "winget not found. Install $displayName manually, then re-run this script."
     }
     winget install --id $wingetId --source winget --accept-package-agreements --accept-source-agreements -e
-    # winget updates PATH for new shells only - refresh this one so we can keep going.
-    if (-not $Constrained) {
+
+    # Make the just-installed tool usable in THIS window: known locations first,
+    # then a full re-read of the persisted PATH where the language mode allows it.
+    Add-KnownToolPaths
+    if (-not (Have $command) -and -not $Constrained) {
         $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
                     [Environment]::GetEnvironmentVariable('Path', 'User')
     }
     if (-not (Have $command)) {
-        throw "$displayName installed but '$command' is not on PATH yet. Close this window, open a new one, and re-run."
+        throw "$displayName installed but '$command' is still not on PATH. Close this window, open a new one, and re-run."
     }
     Ok "$displayName installed"
 }
