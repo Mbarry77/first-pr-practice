@@ -72,6 +72,35 @@ try {
     }
 } catch { Row 'adapters' '(unavailable)' }
 
+Say 'EXPANSION'
+# Answers "can this machine take a 10G card?" without opening the case.
+# Win32_SystemSlot reports each physical slot and whether something is in it.
+try {
+    $slots = @(Get-CimInstance Win32_SystemSlot -ErrorAction Stop)
+    if ($slots.Count -eq 0) {
+        Row 'PCIe slots' '(firmware reports none - check the manual)'
+    } else {
+        foreach ($slot in $slots) {
+            $usage = switch ($slot.CurrentUsage) {
+                3       { 'AVAILABLE' }
+                4       { 'in use' }
+                default { "usage code $($slot.CurrentUsage)" }
+            }
+            Row $slot.SlotDesignation "$usage - $($slot.Description)"
+        }
+    }
+} catch { Row 'PCIe slots' "(unavailable: $($_.Exception.Message))" }
+
+# Thunderbolt is the fallback path to 10G+ when no slot is free - the NAS
+# under consideration has two TB4 ports.
+try {
+    $tb = @(Get-PnpDevice -PresentOnly -ErrorAction Stop |
+            Where-Object { $_.FriendlyName -match 'Thunderbolt|USB4' } |
+            Select-Object -ExpandProperty FriendlyName -Unique)
+    if ($tb) { foreach ($d in $tb) { Row 'Thunderbolt/USB4' $d } }
+    else     { Row 'Thunderbolt/USB4' 'none detected' }
+} catch { Row 'Thunderbolt/USB4' '(unavailable)' }
+
 # -------------------------------------------------------------------- python
 
 $py = $null
@@ -90,6 +119,7 @@ if (-not $py) {
     Write-Host "    `$env:Path += `";`$env:LOCALAPPDATA\Programs\Python\Python312;`$env:LOCALAPPDATA\Programs\Python\Python312\Scripts`""
     exit 1
 }
+Say 'SOFTWARE'
 Row 'Python' (& $py --version)
 
 # ---------------------------------------------------------------- measurements
