@@ -18,6 +18,13 @@ not by editing `main` directly, but by proposing changes for review:
 Keeping changes on their own branch means `main` always stays working,
 and every change gets a chance to be reviewed before it lands.
 
+## Setting up a new computer
+
+To get git and the GitHub CLI installed, sign in, and clone every repo you have
+access to, see [`setup/README.md`](setup/README.md). There's a script for
+Windows and one for macOS/Linux, plus a test that confirms a machine can
+actually push.
+
 ## Status
 
 🚀 First PR in progress — this README is the change being proposed.

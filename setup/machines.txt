@@ -1,0 +1,2 @@
+# Machines that have completed the push test.
+# The test in setup/README.md appends one line per computer.
