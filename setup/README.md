@@ -90,9 +90,30 @@ found).
 
 ---
 
-## The second computer
+## The second computer — the Mac
 
-**macOS / Linux / WSL:**
+Open **Terminal** (Command-Space, type "Terminal"). Run these one at a time.
+
+### Step 1 — Homebrew
+
+Homebrew is what installs the GitHub CLI on macOS. Check whether you already
+have it:
+
+```bash
+brew --version
+```
+
+If that prints a version, skip to step 2. If it says `command not found`:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+It asks for your Mac login password (the prompt stays blank as you type — that's
+normal). When it finishes it prints two `eval` lines under "Next steps" — run
+those, or just open a new Terminal window, otherwise `brew` won't be found.
+
+### Step 2 — clone the repo and run the setup
 
 ```bash
 git clone https://github.com/Mbarry77/first-pr-practice.git ~/github/first-pr-practice
@@ -100,10 +121,17 @@ cd ~/github/first-pr-practice
 bash setup/setup.sh
 ```
 
-If `git` isn't installed yet, macOS will offer to install the developer tools
-when you run that first command — accept, then re-run it.
+On a Mac that has never had developer tools, that first `git` command pops up a
+dialog offering to install the Xcode Command Line Tools. Click **Install**, wait
+for it, then run the command again.
 
-**Another Windows machine:** same three steps as ALPHAX above.
+The script installs the GitHub CLI, signs you in (**GitHub.com → HTTPS → login
+with a browser**), and clones everything into `~/github/`.
+
+### Other Unix-likes
+
+The same `setup.sh` covers Linux and WSL, using apt, dnf, or pacman instead of
+Homebrew. On another Windows PC, follow the PowerShell steps above.
 
 ---
 
@@ -144,9 +172,10 @@ gh pr create --fill --draft
 ```bash
 cd ~/github/first-pr-practice
 git checkout main && git pull
-git checkout -b "hello-from-$(hostname)"
-echo "checked in from $(hostname)" >> setup/machines.txt
-git commit -am "Say hello from $(hostname)"
+MACHINE=$(hostname -s | tr -cd '[:alnum:]-')   # a Mac's hostname has dots in it
+git checkout -b "hello-from-$MACHINE"
+echo "checked in from $MACHINE" >> setup/machines.txt
+git commit -am "Say hello from $MACHINE"
 git push -u origin HEAD
 gh pr create --fill --draft
 ```
